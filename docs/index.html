@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="description" content="고민되는 걸 넣으면 골라 주고, 싫으면 빼고 다시 골라 주는 앱">
+<meta name="theme-color" content="#f4f4f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141415" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="골라츄">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}html{-webkit-tap-highlight-color:transparent}button{touch-action:manipulation}</style>
+</head>
+<body>
+<title>골라츄</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Gothic+A1:wght@400;500;700;800;900&display=swap">
+<style>
+/* Layout: one quiet grayscale column — soft grey chips, a white result card with a round sticker stamp, solid ink buttons */
+:root{
+  --bg:#f4f4f3; --card:#ffffff; --ink:#1d1d1f; --muted:#8a8a8e; --line:#e3e3e1;
+  --chip:#e9e9e7; --chip-ink:#2a2a2c; --strike:#b4b4b8; --btn:#1d1d1f; --btn-ink:#ffffff; --soft:#ffffff;
+  --f:"Gothic A1",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141415; --card:#1f1f21; --ink:#f2f2f0; --muted:#8e8e93; --line:#2e2e31;
+  --chip:#2a2a2d; --chip-ink:#ececea; --strike:#5d5d62; --btn:#f2f2f0; --btn-ink:#141415; --soft:#1f1f21; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141415; --card:#1f1f21; --ink:#f2f2f0; --muted:#8e8e93; --line:#2e2e31;
+  --chip:#2a2a2d; --chip-ink:#ececea; --strike:#5d5d62; --btn:#f2f2f0; --btn-ink:#141415; --soft:#1f1f21; color-scheme:dark}
+
+*{box-sizing:border-box} [hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.55}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+/* 화면에 실제로 보이는 영역(키보드 위)에 딱 맞춰 붙여요. 높이와 위치는 아래 스크립트가 재서 넣어요 */
+.wrap{position:fixed;left:0;right:0;top:var(--app-top,0px);height:var(--app-h,100%);max-width:420px;margin:0 auto;
+  padding-inline:16px;padding-top:max(16px,env(safe-area-inset-top,0px));padding-bottom:max(clamp(24px,7vh,64px),env(safe-area-inset-bottom,0px));
+  display:flex;flex-direction:column;gap:14px;overflow:hidden;touch-action:none}
+.wrap .chips{touch-action:pan-y;overscroll-behavior:contain}
+.wrap input,.wrap button{touch-action:manipulation}
+html.kb .wrap,html.typing .wrap{padding-bottom:10px}
+.bottom{display:flex;flex-direction:column;gap:12px}
+.bottom .chips{max-height:30vh;overflow-y:auto;padding-block:2px}
+.tools:has(#left:empty){display:none}
+
+.addrow{display:flex;gap:6px;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:5px 5px 5px 14px}
+.addrow:focus-within{border-color:var(--ink)}
+#item{flex:1;min-width:0;font:inherit;font-size:16px;border:0;outline:none;background:transparent;color:var(--ink)}
+#item::placeholder{color:var(--muted)}
+
+.btn{font:inherit;font-weight:800;border:0;border-radius:12px;cursor:pointer;background:var(--btn);color:var(--btn-ink);transition:transform .1s}
+.btn:active:not(:disabled){transform:scale(.96)}
+.add{padding:9px 15px;border-radius:10px;font-size:14px}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:inline-flex;align-items:center;gap:2px;background:var(--chip);color:var(--chip-ink);border-radius:999px;padding:6px 5px 6px 13px;font-size:14px;font-weight:700;max-width:100%;animation:pop .28s cubic-bezier(.3,1.6,.5,1);transition:background .2s,color .2s}
+.chip span{overflow-wrap:anywhere}
+.chip.out{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.chip.out span{color:var(--strike);text-decoration:line-through;text-decoration-thickness:1.5px}
+.chip.win{background:var(--btn);color:var(--btn-ink)}
+.chip.win button{color:var(--btn-ink)}
+.chip button{border:0;background:none;color:var(--muted);font-size:12px;cursor:pointer;width:22px;height:22px;border-radius:50%;font-weight:900}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+.empty{color:var(--muted);font-size:13px;margin:0}
+.tools{display:flex;gap:14px;font-size:12.5px;color:var(--muted);flex-wrap:wrap;align-items:center}
+.tools #left{margin-right:auto;font-variant-numeric:tabular-nums}
+.link{border:0;background:none;color:var(--muted);cursor:pointer;font:inherit;font-weight:700;padding:0;text-decoration:underline;text-underline-offset:3px}
+
+.stage{position:relative;background:var(--card);border-radius:22px;padding:44px 20px 38px;text-align:center;
+  display:flex;flex-direction:column;gap:6px;flex:1 1 auto;min-height:150px;justify-content:center}
+.stamp{position:absolute;top:-14px;right:18px;width:66px;height:66px;border-radius:50%;background:var(--btn);color:var(--btn-ink);
+  display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:900;letter-spacing:-.3px;transform:rotate(12deg);line-height:1.15;text-align:center}
+.stamp.pop{animation:stamp .35s cubic-bezier(.3,1.8,.5,1)}
+@keyframes stamp{from{transform:rotate(-10deg) scale(.4)}}
+.stage.done .stamp{background:var(--card);color:var(--ink);box-shadow:inset 0 0 0 2.5px var(--ink)}
+.say:empty{display:none}
+.say{color:var(--muted);font-size:14px;font-weight:700;margin:0;min-height:1.5em}
+.pick{font-weight:900;font-size:clamp(32px,10vw,46px);line-height:1.2;margin:0;overflow-wrap:anywhere;letter-spacing:-1px}
+.pick.q{font-family:"Fredoka",var(--f);font-size:clamp(96px,30vw,128px);line-height:1;font-weight:600;letter-spacing:0;color:var(--strike)}
+.pick.spin{opacity:.3}
+.pick.land{animation:land .4s cubic-bezier(.3,1.7,.5,1)}
+@keyframes land{from{transform:scale(.6)}}
+.dots{display:inline-flex;gap:5px;justify-content:center;height:8px}
+.dots b{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:dot .9s infinite}
+.dots b:nth-child(2){animation-delay:.15s}.dots b:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,60%,100%{transform:none;opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+
+.decide{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.no{font-size:21px;font-weight:900;padding:15px}
+.yes{background:var(--soft);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink);font-size:16px;padding:15px}
+.go{font-size:19px;font-weight:900;padding:16px;width:100%}
+.btn:disabled{opacity:.3;cursor:default}
+.btn:focus-visible,.chip button:focus-visible,.link:focus-visible{outline:2.5px solid var(--ink);outline-offset:3px}
+.shake{animation:shake .32s}
+@keyframes shake{20%{transform:translateX(-7px) rotate(-1deg)}60%{transform:translateX(7px) rotate(1deg)}}
+/* 보이는 화면이 짧으면(키보드가 올라오면) 결과 카드를 줄여 입력칸과 버튼이 늘 보이게 */
+html.short .stage{min-height:84px;padding:12px 16px;gap:2px;border-radius:18px}
+html.short .pick.q{font-size:64px}
+html.short .pick{font-size:30px}
+html.short .say{font-size:13px}
+html.short .bottom{gap:10px}
+html.short .bottom .chips{max-height:22vh}
+html.short .go,.no{padding-block:13px}
+html.short .yes{padding-block:13px}
+@media (prefers-reduced-motion: reduce){.pick.land,.shake,.chip,.stamp.pop,.dots b{animation:none}}
+</style>
+
+<div class="wrap">
+  <div class="stage" id="stage">
+    <div class="stamp" id="stamp" aria-hidden="true" hidden></div>
+    <div class="dots" id="dots" hidden><b></b><b></b><b></b></div>
+    <p class="say" id="say">선택지를 두 개 이상 넣어 주세요</p>
+    <p class="pick q" id="pick">?</p>
+  </div>
+
+  <div class="bottom">
+    <div class="tools" id="tools">
+      <span id="left"></span>
+      <button class="link" id="revive" hidden>탈락한 거 되살리기</button>
+      <button class="link" id="clear" hidden>모두 지우기</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <p class="empty" id="empty">아직 선택지가 없어요</p>
+
+    <form class="addrow" id="addForm">
+      <input id="item" maxlength="300" enterkeyhint="done" placeholder="선택지 입력 (쉼표로 여러 개)" autocomplete="off" aria-label="선택지">
+      <button class="btn add" type="submit">추가</button>
+    </form>
+
+    <button class="btn go" id="go">골라주세요</button>
+    <div class="decide" id="decide" hidden>
+      <button class="btn no" id="no">싫어</button>
+      <button class="btn yes" id="yes">좋아</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let items=[], out=new Set(), current=null, done=false, rolling=false, rejects=0;
+let goMode="first"; // first | again | revive
+
+function save(){}
+const alive=()=>items.filter(x=>!out.has(x));
+
+function face(mood, anim){
+  const st=$("stamp"), label="";
+  st.innerHTML=label; st.hidden=!label; $("dots").hidden = mood!=="think";
+  if(anim || mood){ st.classList.remove("pop"); void st.offsetWidth; st.classList.add("pop") }
+}
+
+function render(){
+  const c=$("chips"); c.textContent="";
+  items.forEach(x=>{
+    const el=document.createElement("span");
+    el.className="chip"+(out.has(x)?" out":"")+(done&&x===current?" win":"");
+    const t=document.createElement("span"); t.textContent=x; el.appendChild(t);
+    const b=document.createElement("button"); b.type="button"; b.setAttribute("aria-label",x+" 지우기"); b.textContent="✕";
+    b.onclick=()=>{ items=items.filter(y=>y!==x); out.delete(x); if(current===x) resetStage(); save(); render() };
+    el.appendChild(b); c.appendChild(el);
+  });
+  $("empty").hidden = items.length>0;
+  const n=alive().length;
+  $("left").textContent = items.length ? `후보 ${n}개` + (out.size?` · 탈락 ${out.size}개`:"") : "";
+  $("revive").hidden = out.size===0;
+  $("clear").hidden = items.length===0;
+  if(!current && !rolling && goMode==="first"){
+    $("say").textContent = items.length<2 ? "선택지를 두 개 이상 넣어 주세요" : "";
+    $("go").disabled = items.length<2;
+  }
+}
+
+$("addForm").onsubmit=e=>{
+  e.preventDefault();
+  const v=$("item").value.trim(); if(!v) return;
+  v.split(/[,，、\n]/).map(s=>s.trim().slice(0,40)).filter(Boolean).forEach(s=>{ if(!items.includes(s)) items.push(s) });
+  $("item").value=""; save(); render();
+};
+$("clear").onclick=()=>{ items=[]; out.clear(); resetStage(); save(); render(); $("item").focus() };
+$("revive").onclick=()=>{ out.clear(); resetStage(); render() };
+
+function resetStage(){
+  current=null; done=false; rejects=0; goMode="first";
+  $("pick").textContent="?"; $("pick").classList.add("q"); $("stage").classList.remove("done"); face("");
+  $("go").hidden=false; $("go").textContent="골라주세요"; $("decide").hidden=true;
+}
+
+const noLines=["그럼 이건?","이것도 싫어? 그럼…","까다롭네 ㅋㅋ 이건 어때","좋아, 진짜 이번엔","아직도?! 그럼 이거!"];
+function roll(msg){
+  const pool=alive();
+  if(pool.length===0){ allRejected(); return }
+  rolling=true; $("go").disabled=true; $("no").disabled=true; $("yes").disabled=true;
+  face("think");
+  const target=pool[Math.floor(Math.random()*pool.length)];
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const p=$("pick"); p.classList.remove("q"); $("say").textContent="";
+  let i=0; const steps=reduce?0:(pool.length>1?12:3);
+  (function tick(){
+    if(i<steps){
+      p.classList.add("spin");
+      let next=pool[Math.floor(Math.random()*pool.length)];
+      if(pool.length>1) while(next===p.textContent) next=pool[Math.floor(Math.random()*pool.length)];
+      p.textContent=next; i++; setTimeout(tick,50+i*i*2);
+    } else {
+      p.classList.remove("spin","land"); void p.offsetWidth;
+      p.textContent=target; p.classList.add("land");
+      current=target; rolling=false; goMode="first";
+      face("", "bounce");
+      $("say").textContent = pool.length===1 && items.length>1 ? "이제 이것밖에 안 남았어요 ㅋㅋ" : msg;
+      $("go").hidden=true; $("decide").hidden=false;
+      $("no").disabled=false; $("yes").disabled=false; $("go").disabled=false;
+      render();
+    }
+  })();
+}
+
+$("go").onclick=()=>{
+  if(goMode==="first"){ if(items.length<2){ $("item").focus(); return } out.clear(); rejects=0; roll("오늘은 이거!") }
+  else if(goMode==="again"){ out.clear(); done=false; rejects=0; $("stage").classList.remove("done"); $("go").textContent="골라주세요"; goMode="first"; roll("오늘은 이거!") }
+  else if(goMode==="revive"){ out.clear(); rejects=0; $("go").textContent="골라주세요"; goMode="first"; roll("다시 간다! 이거!") }
+};
+$("no").onclick=()=>{
+  if(!current) return;
+  out.add(current); current=null; render();
+  face("pout","wobble");
+  const s=$("stage"); s.classList.remove("shake"); void s.offsetWidth; s.classList.add("shake");
+  const line=noLines[Math.min(rejects,noLines.length-1)]; rejects++;
+  setTimeout(()=>roll(line), 650);
+};
+$("yes").onclick=()=>{
+  done=true; $("stage").classList.add("done");
+  face("happy","bounce");
+  $("say").textContent="결정 완료";
+  $("decide").hidden=true; $("go").hidden=false; $("go").textContent="다시 고르기"; goMode="again";
+  render();
+};
+
+function allRejected(){
+  rolling=false; current=null;
+  face("pout","wobble");
+  $("pick").textContent="다 싫대…";
+  $("say").textContent="탈락한 거 되살려서 다시 해 볼까요?";
+  $("decide").hidden=true; $("go").hidden=false; $("go").disabled=false; $("go").textContent="전부 되살리고 다시"; goMode="revive";
+  render();
+}
+
+render();
+
+// 키보드 대응
+// 1) 입력칸을 누르면(=키보드가 뜨면) ? 칸을 납작하게 줄이고 입력칸·버튼을 위로 붙여요.
+//    안드로이드처럼 키보드 높이를 알려 주지 않고 화면을 밀어 올리는 경우에도 동작해요.
+// 2) 키보드 높이를 알 수 있는 곳(아이폰 사파리 등)에서는 보이는 영역에 화면을 딱 맞춰요.
+(function(){
+  const root=document.documentElement, vv=window.visualViewport, input=$("item");
+  let full=0, typing=false, pointerDown=false, leaveTimer=0;
+  function fit(){
+    const h=vv?vv.height:innerHeight, top=vv?vv.offsetTop:0;
+    full=Math.max(full,h);
+    const shrunk=full-h>120;
+    // 키보드가 떠도 화면 높이가 그대로면(키보드 높이를 알 수 없으면) 보통 키보드 높이만큼 비워 둬요
+    const kbShare=/iPhone|iPad|iPod/.test(navigator.userAgent)?0.46:0.40;
+    const appH = (typing && !shrunk) ? Math.round(full*(1-kbShare)) : h;
+    root.style.setProperty("--app-h",appH+"px");
+    root.style.setProperty("--app-top",top+"px");
+    root.classList.toggle("typing",typing);
+    root.classList.toggle("short",typing || h<600);
+    root.classList.toggle("kb",shrunk);
+    requestAnimationFrame(unscroll);
+  }
+  // 입력칸을 누르면 폰이 화면을 멋대로 아래로 스크롤해요. 화면이 다 보이니 스크롤은 늘 맨 위로 되돌려요
+  const wrap=document.querySelector(".wrap");
+  function unscroll(){
+    if(scrollX||scrollY) scrollTo(0,0);
+    const se=document.scrollingElement; if(se&&se.scrollTop) se.scrollTop=0;
+    if(document.body.scrollTop) document.body.scrollTop=0;
+    if(wrap.scrollTop && wrap.scrollHeight<=wrap.clientHeight+2) wrap.scrollTop=0;
+  }
+  addEventListener("scroll",unscroll,{passive:true});
+  // 손가락으로 끌어도 화면이 움직이지 않게 (선택지 칩 칸이 넘칠 때만 그 안에서 스크롤)
+  document.addEventListener("touchmove",e=>{
+    const c=e.target.closest&&e.target.closest(".chips");
+    if(!(c && c.scrollHeight>c.clientHeight+1)) e.preventDefault();
+  },{passive:false});
+  wrap.addEventListener("scroll",unscroll,{passive:true});
+  function enter(){ clearTimeout(leaveTimer); if(!typing){ typing=true; fit() } [50,200,400,700].forEach(t=>setTimeout(()=>{ fit(); unscroll() },t)) }
+  function leave(){ clearTimeout(leaveTimer); leaveTimer=setTimeout(()=>{ if(document.activeElement!==input){ typing=false; fit() } },60) }
+  input.addEventListener("focus",enter);
+  // 아이폰 사파리는 입력칸을 누르면 페이지를 위로 밀어 올려요.
+  // 탭을 직접 받아서, 먼저 배치를 바꾸고 "스크롤하지 말고" 입력칸만 켜요
+  input.addEventListener("touchend",e=>{
+    if(document.activeElement===input) return;
+    e.preventDefault(); enter();
+    try{ input.focus({preventScroll:true}) }catch(_){ input.focus() }
+    unscroll();
+  },{passive:false});
+  // 버튼을 누르는 도중에 배치가 바뀌면 손가락이 엉뚱한 곳을 누르게 되니, 손을 뗀 뒤에 원래대로 돌려요
+  input.addEventListener("blur",()=>{ if(!pointerDown) leave() });
+  addEventListener("pointerdown",()=>{ pointerDown=true },true);
+  addEventListener("pointerup",()=>{ setTimeout(()=>{ pointerDown=false; if(document.activeElement!==input) leave() },0) },true);
+  addEventListener("pointercancel",()=>{ pointerDown=false; if(document.activeElement!==input) leave() },true);
+  if(vv){ vv.addEventListener("resize",fit); vv.addEventListener("scroll",fit) }
+  // 키보드 때문에 높이만 바뀐 건 기억을 지우지 않고, 폭이 바뀌었을 때(화면 회전 등)만 새로 재요
+  let lastW=innerWidth;
+  addEventListener("resize",()=>{ if(innerWidth!==lastW){ lastW=innerWidth; full=0 } fit() });
+  addEventListener("orientationchange",()=>{ full=0; setTimeout(fit,300) });
+  fit();
+})();
+</script>
+
+<script>
+if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+</script>
+</body>
+</html>

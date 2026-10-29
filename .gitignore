@@ -1,0 +1,14 @@
+.gradle/
+build/
+app/build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+*.jks
+*.keystore
+
+# 서명해서 만든 스토어용 파일은 올리지 않아요
+app/release/
+*.aab
+*.apk

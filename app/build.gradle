@@ -1,0 +1,37 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.golrachu.app'
+    compileSdk 36
+
+    defaultConfig {
+        // 앱 고유 ID. 플레이스토어에 한 번 올리면 바꿀 수 없어요.
+        applicationId "com.nia.golrachu"
+        minSdk 24
+        targetSdk 36
+        versionCode 4
+        versionName "1.0.3"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    buildFeatures {
+        buildConfig true   // 개발용 실행이면 테스트 광고, 스토어용이면 진짜 광고를 고르기 위해 필요
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // 구글 AdMob 광고
+    implementation 'com.google.android.gms:play-services-ads:25.5.0'
+}

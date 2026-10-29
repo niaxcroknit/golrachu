@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 안드로이드 12 이상: 앱을 켤 때 뜨는 시작 화면 -->
+    <style name="Theme.Golrachu" parent="Base.Golrachu">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowSplashScreenBackground">@color/bg</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/icon_bg</item>
+    </style>
+</resources>
